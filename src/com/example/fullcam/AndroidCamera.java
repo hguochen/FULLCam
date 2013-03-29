@@ -287,7 +287,7 @@ public class AndroidCamera extends Activity implements SurfaceHolder.Callback, O
 	
 	private File getOutputMediaFile(int type) {
 		File mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), "FullCam");
-		
+		//A comment
 		//Create the storage directory if it does not exist already
 		if(!mediaStorageDir.exists()) {
 			if(!mediaStorageDir.mkdirs()) {
