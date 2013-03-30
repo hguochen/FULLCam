@@ -43,6 +43,16 @@
         android:layout_height="wrap_content"
         android:layout_above="@+id/tvSaved"
         android:layout_alignParentLeft="true"
+        android:layout_marginBottom="23dp"
+        android:text=" "
+        android:textAppearance="?android:attr/textAppearanceLarge" />
+
+    <TextView
+        android:id="@+id/tvSaveConfirm"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_above="@+id/tvSaved"
+        android:layout_alignParentLeft="true"
         android:text=" "
         android:textAppearance="?android:attr/textAppearanceLarge" />
 

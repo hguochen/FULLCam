@@ -43,11 +43,15 @@ public class AndroidCamera extends Activity implements SurfaceHolder.Callback, O
 	boolean previewing = false;
 	ImageButton ibCapture;
 	LayoutInflater controlInflater = null;
+	File pictureFile;
 	int stillCount = 0;
+	int picCount = 0;
+	double force, gyroIndex;
 	private static final String TAG = "AndroidCamera";
 	private static final int MEDIA_TYPE_IMAGE = 1;
+	private static final double stabilityIndex = -0.005;
 	
-	TextView tvAccel, tvGyro, tvSaved, tvCount;
+	TextView tvAccel, tvGyro, tvSaved, tvCount, tvSaveConfirm;
 	SensorManager mSensorManager, mAccelSensor, mGyroSensor;
 	SensorEventListener mSensorListener;
 	Sensor mAccel, mGyro;
@@ -62,6 +66,7 @@ public class AndroidCamera extends Activity implements SurfaceHolder.Callback, O
 		initializeSensorView();
 		tvSaved = (TextView) findViewById(R.id.tvSaved);
 		tvCount = (TextView) findViewById(R.id.tvCount);
+		tvSaveConfirm = (TextView) findViewById(R.id.tvSaveConfirm);
 		ibCapture = (ImageButton) findViewById(R.id.ibCapture);
 		ibCapture.setOnClickListener(this);
 		
@@ -96,22 +101,23 @@ public class AndroidCamera extends Activity implements SurfaceHolder.Callback, O
 					float x_accel = event.values[0];
 					float y_accel = event.values[1];
 					float z_accel = event.values[2];
-					double force = Math.sqrt(x_accel*x_accel +y_accel*y_accel+z_accel*z_accel) - 9.81; //Linear acceleration index
+					force = Math.sqrt(x_accel*x_accel +y_accel*y_accel+z_accel*z_accel) - 9.81; //Linear acceleration index
 					tvAccel.setText("Accelerometer: " + 
-									"\n" +"x: " + x_accel + "\t m/s2" + 
-									"\n" +"y: " + y_accel + "\t m/s2" + 
-									"\n" +"z: " + z_accel + "\t m/s2" +
-									"\n" +"Force: " + force);
+									"\n" +"x: " + String.format("%.4f", x_accel) + "\t m/s2" + 
+									"\n" +"y: " + String.format("%.4f", y_accel) + "\t m/s2" + 
+									"\n" +"z: " + String.format("%.4f", z_accel) + "\t m/s2" +
+									"\n" +"Stability: " + String.format("%.4f",force));
 					tvAccel.setTextColor(Color.WHITE);
 				} else if(sensor.getType() == Sensor.TYPE_GYROSCOPE) {
 					//Gyroscope sensor has 3 values, one for each axis
 					float x_gyro = event.values[0];
 					float y_gyro = event.values[1];
 					float z_gyro = event.values[2];
+					gyroIndex = Math.sqrt(x_gyro + y_gyro + z_gyro)/3;
 					tvGyro.setText("Gyroscope: " +
-									"\n"+"x: " + x_gyro + "\trad/s" +
-									"\n"+"y: " + y_gyro + "\trad/s" +
-									"\n"+"y: " + z_gyro + "\trad/s");
+									"\n"+"x: " + String.format("%.4f", x_gyro) + "\trad/s" +
+									"\n"+"y: " + String.format("%.4f", y_gyro) + "\trad/s" +
+									"\n"+"y: " + String.format("%.4f", z_gyro) + "\trad/s");
 					tvGyro.setTextColor(Color.WHITE);
 				}
 			}
@@ -248,8 +254,9 @@ public class AndroidCamera extends Activity implements SurfaceHolder.Callback, O
 			} finally {
 			}
 			Log.d(TAG, "onPictureTaken - jpeg");*/
-			
-			File pictureFile = getOutputMediaFile(MEDIA_TYPE_IMAGE);
+			if(force < stabilityIndex) {
+				pictureFile = getOutputMediaFile(MEDIA_TYPE_IMAGE);
+			}
 			if(pictureFile == null) {
 				Log.d(TAG, "Error creating media file, check storage permissions.");
 				return;
@@ -257,8 +264,10 @@ public class AndroidCamera extends Activity implements SurfaceHolder.Callback, O
 			try {
 				FileOutputStream fos = new FileOutputStream(pictureFile);
 				fos.write(data);
+				
 				tvSaved.setText("Image saved: " + pictureFile);
 				tvSaved.setTextColor(Color.WHITE);
+				tvSaveConfirm.setText(picCount + " pictures saved.");
 				fos.close();
 			} catch(FileNotFoundException e) {
 				Log.d(TAG, "File not found: "+ e.getMessage());
@@ -272,13 +281,16 @@ public class AndroidCamera extends Activity implements SurfaceHolder.Callback, O
 				
 				if(stillCount < 20) {
 					mCamera.takePicture(shutterCallback, rawCallback, jpegCallback);
-					tvCount.setText(stillCount + " pictures saved.");
+					tvCount.setText(stillCount + " pictures taken.");
 					tvCount.setTextColor(Color.GREEN);
 				} else {
 					stillCount = 0;
-					Thread.sleep(1000);
+					picCount = 0;
+					//Remove notifications after 2 seconds
+					Thread.sleep(2000);
 					tvCount.setText(" ");
 					tvSaved.setText(" ");
+					tvSaveConfirm.setText(" ");
 					ibCapture.setEnabled(true);
 				}
 			} catch(Exception e) {
@@ -300,9 +312,11 @@ public class AndroidCamera extends Activity implements SurfaceHolder.Callback, O
 		// Create a media file name
 	    String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(new Date());
 	    File mediaFile;
+	    
 	    if (type == MEDIA_TYPE_IMAGE){
+	    	picCount++;
 	        mediaFile = new File(mediaStorageDir.getPath() + File.separator +
-	        "IMG_"+ timeStamp + ".jpg");
+	        "IMG_"+ timeStamp +"_"+ picCount + ".jpg");
 	    } else {
 	        return null;
 	    }
